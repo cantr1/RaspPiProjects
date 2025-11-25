@@ -19,6 +19,11 @@ GPIO.setup(rInput,GPIO.IN,pull_up_down=GPIO.PUD_UP)
 GPIO.setup(gInput,GPIO.IN,pull_up_down=GPIO.PUD_UP)
 GPIO.setup(bInput,GPIO.IN,pull_up_down=GPIO.PUD_UP)
 
+# Set state for mixing
+rState=False
+gState=False
+bState=False
+
 try:
     while True:
         rVal = GPIO.input(rInput)
@@ -28,22 +33,31 @@ try:
             print("ALL BUTTONS PRESSED --- NO CHANGE")
         if rVal == 0:
             sleep(0.2)
-            GPIO.output(gPin, 0)
-            GPIO.output(bPin,0)
+            if rState:
+                GPIO.output(rPin,0)
+                rState=False
+            else:
+                GPIO.output(rPin,1)
+                rState=True
             sleep(0.1)
-            GPIO.output(rPin,1)
         if gVal == 0:
             sleep(0.2)
-            GPIO.output(rPin, 0)
-            GPIO.output(bPin,0)
+            if gState:
+                GPIO.output(gPin,0)
+                gState=False
+            else:
+                GPIO.output(gPin,1)
+                gState=True
             sleep(0.1)
-            GPIO.output(gPin,1)
         if bVal == 0:
             sleep(0.2)
-            GPIO.output(rPin, 0)
-            GPIO.output(gPin,0)
+            if bState:
+                GPIO.output(bPin,0)
+                bState=False
+            else:
+                GPIO.output(bPin,1)
+                bState=True
             sleep(0.1)
-            GPIO.output(bPin,1)
 
 except KeyboardInterrupt:
     GPIO.output(rPin,0)
