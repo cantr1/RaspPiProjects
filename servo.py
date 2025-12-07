@@ -15,7 +15,6 @@ try:
         analogVal=ADC0834.getResult(0)
         convertedVal = analogVal * 0.0447
         pwm.ChangeDutyCycle(convertedVal)
-        sleep(0.05)
 except KeyboardInterrupt:
     GPIO.cleanup()
     print("\nGPIO Released...")
