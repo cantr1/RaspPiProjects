@@ -13,7 +13,7 @@ pwm.start(0)
 try:
     while True:
         analogVal=ADC0834.getResult(0)
-        convertedVal = analogVal * 0.0447
+        convertedVal = analogVal * (10/255) + 2
         pwm.ChangeDutyCycle(convertedVal)
 except KeyboardInterrupt:
     GPIO.cleanup()
