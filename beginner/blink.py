@@ -1,20 +1,28 @@
 #!/usr/bin/python3
-import RPi.GPIO as GPIO
+"""
+Simple program to take user input and blink an LED the requested times
+"""
+import RPi.GPIO as gp
 from time import sleep
 
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup(11, GPIO.OUT)
+# Setup pin for output
+gpio_pin = 21
+gp.setmode(gp.BCM)
+gp.setup(gpio_pin, gp.OUT)
 
 
-print("blink.py\n'EXIT' to exit...\n")
-
-while True:
-    x = input("Number of blinks: ")
-    if x == "EXIT":
-        GPIO.cleanup()
-        exit(0)
-    for i in range(int(x)):
-        GPIO.output(11,1)
-        sleep(0.3)
-        GPIO.output(11,0)
-        sleep(0.3)
+print("blink.py\n'x' to exit...\n")
+try:
+    while True:
+        x = input("Number of blinks: ").lower().strip()
+        if x == "x":
+            break
+        for i in range(int(x)):
+            gp.output(gpio_pin,1)
+            sleep(0.3)
+            gp.output(gpio_pin,0)
+            sleep(0.3)
+except KeyboardInterrupt:
+    print("\nctrl+c - bye!")
+finally:
+    gp.cleanup()
