@@ -1,26 +1,33 @@
-import RPi.GPIO as GPIO
+#!/usr/bin/python3
+"""
+Extension of the pull_down.py that creates a toggle switch
+"""
+import RPi.GPIO as gp
 from time import sleep
 
-GPIO.setmode(GPIO.BOARD)
+gp.setmode(gp.BCM)
 
-inPin=32
-outPin=38
-GPIO.setup(inPin,GPIO.IN,pull_up_down=GPIO.PUD_UP)
-GPIO.setup(outPin,GPIO.OUT)
-delay=0.4
-LED=False
+# inPin reads vals, outpin controls V to LED
+inPin=26
+outPin=16
+
+gp.setup(inPin,gp.IN,pull_up_down=gp.PUD_UP)
+gp.setup(outPin,gp.OUT)
+
 try:
+    led_on = False
+    read_delay = 0.25
     while True:
-        readVal=GPIO.input(inPin)
-        print(f"Read Value: {readVal}")
-        if readVal == 0:
-            if LED:
-                GPIO.output(outPin,1)
-                LED = False
+        read_val = gp.input(inPin)
+        if read_val == 0:
+            if led_on:
+                gp.output(outPin,0)
+                led_on = False
             else:
-                GPIO.output(outPin,0)
-                LED = True
-        sleep(delay)
-
+                gp.output(outPin, 1)
+                led_on = True
+            sleep(read_delay)
 except KeyboardInterrupt:
-    GPIO.cleanup()
+    print("\nctrl+c - bye")
+finally:
+    gp.cleanup()
