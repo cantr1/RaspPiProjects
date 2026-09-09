@@ -1,22 +1,22 @@
-import RPi.GPIO as GPIO
-import ADC0834
+import RPi.GPIO as gpio
+import ADC0834 as adc
 from time import sleep
 
-GPIO.setmode(GPIO.BCM)
-ADC0834.setup()
+gpio.setmode(gpio.BCM)
+adc.setup()
 
-# Setup GPIO Pin for LEDs
+# Setup gpio Pin for LEDs
 rPin=16
-GPIO.setup(rPin,GPIO.OUT)
-rPWM=GPIO.PWM(rPin,100)
+gpio.setup(rPin,gpio.OUT)
+rPWM=gpio.PWM(rPin,100)
 
 gPin=20
-GPIO.setup(gPin,GPIO.OUT)
-gPWM=GPIO.PWM(gPin,100)
+gpio.setup(gPin,gpio.OUT)
+gPWM=gpio.PWM(gPin,100)
 
 bPin=21
-GPIO.setup(bPin,GPIO.OUT)
-bPWM=GPIO.PWM(bPin,100)
+gpio.setup(bPin,gpio.OUT)
+bPWM=gpio.PWM(bPin,100)
 
 # Starting Cycle - Set's default brightness and value to be modified
 brightness = 0
@@ -26,14 +26,14 @@ bPWM.start(brightness)
 
 try:
     while True:
-        rVal=ADC0834.getResult(0)
-        gVal=ADC0834.getResult(1)
-        bVal=ADC0834.getResult(2)
+        rVal=adc.getResult(0)
+        gVal=adc.getResult(1)
+        bVal=adc.getResult(2)
         #print(analogVal)
         sleep(.1)
         rPWM.ChangeDutyCycle((rVal * (100/255)))
         gPWM.ChangeDutyCycle((gVal * (100/255)))
         bPWM.ChangeDutyCycle((bVal * (100/255)))
 except KeyboardInterrupt:
-    GPIO.cleanup()
-    print("\nGPIO exited cleanly...")
+    gpio.cleanup()
+    print("\ngpio exited cleanly...")

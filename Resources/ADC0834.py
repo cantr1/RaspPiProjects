@@ -2,7 +2,7 @@
 #-----------------------------------------------------
 #
 # This is a program for all ADC chip. It
-# convert analog singnal to digital signal.
+# converts analog singnal to digital signal.
 #
 # This program is most analog signal modules'
 # dependency. Use it like this:
