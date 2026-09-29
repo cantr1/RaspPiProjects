@@ -1,0 +1,14 @@
+---
+- name: Setup Cronjob for Measurements
+  hosts: localhost
+  become: false
+  gather_facts: false
+
+  tasks:
+  - name: Setup Cronjob
+    ansible.builtin.cron:
+      name: "Take MycoAPI Measurement"
+      hour: "*"
+      minute: "0"
+      job: "/usr/bin/curl -X POST localhost:8080/api/measure"
+

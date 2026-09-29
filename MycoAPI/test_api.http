@@ -1,0 +1,24 @@
+@baseUrl = http://192.168.1.121:8080
+
+### Take and save a measurement
+# Expected: 201 Created with id, time_of_measure, temperature_c, and humidity.
+# Sensor timeout/read failure or database failure: 500 with a JSON detail message.
+# Each successful request inserts a new database row.
+POST {{baseUrl}}/api/measure
+Accept: application/json
+
+### Fetch the latest measurements (run after the POST above)
+# Expected: 200 OK with up to 10 records, newest first; [] if the table is empty.
+# Check that the saved measurement's id appears in this response.
+GET {{baseUrl}}/api/latest
+Accept: application/json
+
+### Verify that measuring requires POST
+# Expected: 405 Method Not Allowed, with no measurement taken or row inserted.
+GET {{baseUrl}}/api/measure
+Accept: application/json
+
+### Verify an unknown endpoint
+# Expected: 404 Not Found.
+GET {{baseUrl}}/api/does-not-exist
+Accept: application/json
