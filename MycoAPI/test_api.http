@@ -1,9 +1,15 @@
 @baseUrl = http://192.168.1.121:8080
 
+### API health
+# Expected: 200 OK with {"status": "healthy"}.
+GET {{baseUrl}}/api/health
+Accept: application/json
+
 ### Take and save a measurement
-# Expected: 201 Created with id, time_of_measure, temperature_c, and humidity.
+# Expected: 201 Created with id, time_of_measure, temperature_c, humidity, and within_tolerance.
 # Sensor timeout/read failure or database failure: 500 with a JSON detail message.
 # Each successful request inserts a new database row.
+# Out-of-range readings still return 201, with within_tolerance: false, and blink red three times.
 POST {{baseUrl}}/api/measure
 Accept: application/json
 

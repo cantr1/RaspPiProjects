@@ -16,7 +16,8 @@ that database, for example `psql -d mycoapi -f schema.sql` using your administra
 connection. Ensure the API database user has SELECT and INSERT privileges on
 `measurements` and USAGE on its schema.
 The script creates the table and index; it does not create the database or user.
-`within_tolerance` is omitted until tolerance rules are defined.
+`within_tolerance` is a required boolean stored with each reading. Recreate the
+table using the updated schema before running this version.
 
 Set `DB_URL` in `.env` using `.env.example` as a reference. Keep your existing
 `.env` if it already has the correct connection string. Percent-encode special
@@ -27,23 +28,28 @@ python -m uvicorn main:app --host 0.0.0.0 --port 8080 --workers 1
 ```
 
 Use one worker and avoid reload mode when using the sensor: its lock coordinates
-threads within one process. GPIO is initialized at startup and cleaned up at shutdown.
+threads within one process. GPIO is initialized at startup. Press Ctrl+C once for graceful shutdown: the
+lifespan handler stops all three PWM channels and calls `gpio.cleanup()`.
+Ctrl+X does not stop Uvicorn; a forced kill cannot run cleanup.
 
 ```sh
 curl -i -X POST http://localhost:8080/api/measure
 curl -i http://localhost:8080/api/latest
+curl -i http://localhost:8080/api/health
 ```
 
 POST returns 201 with the saved record only after commit. Sensor timeout/read
 failure and database failure return 500 with a JSON error. GET returns 200 with
 the latest ten records in descending measurement-time order, or an empty array.
-Records contain `id`, `time_of_measure` (UTC), `temperature_c`, and `humidity`.
+Records contain `id`, `time_of_measure` (UTC), `temperature_c`, `humidity`, and `within_tolerance`.
+`GET /api/health` returns `{"status": "healthy"}` as a liveness check only; it does
+not verify the database or sensor.
 Interactive API documentation is at http://localhost:8080/docs.
 
-The three-second sensor budget includes waiting for the sensor lock. Reads are
+The eight-second sensor budget includes waiting up to three seconds for the sensor lock. Reads are
 followed by a 250 ms pause before the next attempt; readings finishing after the deadline are
 discarded. This does not interrupt a blocked hardware driver call, and database
-work happens after the sensor budget. It is not a strict HTTP response deadline.
+work and LED feedback happen after the sensor budget. It is not a strict HTTP response deadline.
 This faster retry interval is experimental and exceeds the DHT11's documented
 sampling rate. Adjust `SENSOR_RETRY_INTERVAL_SECONDS` in `main.py` if needed;
 invalid readings log the driver's error code for diagnosis.
@@ -52,3 +58,21 @@ For tests on a development computer, install `requirements.txt` and
 `requirements-dev.txt`, then run `python -m pytest` from this directory. Tests use
 fake sensor/database objects; hardware imports occur only during real startup.
 On macOS without libpq, install `psycopg[binary]` for the test environment.
+
+## Tolerance and LEDs
+
+Defaults are 16–21°C and 85–95% RH, inclusive; both measurements must be within
+range. These are starting alert limits for a fruiting room, chosen using
+[Cornell's fruiting guidance](https://smallfarms.cornell.edu/resources/methods-of-commercial-mushroom-cultivation-in-the-northeastern-united-states/2-seven-stages-of-cultivation/).
+They are not a universal profile for every species, strain, or incubation stage.
+Override `TEMPERATURE_MIN_C`, `TEMPERATURE_MAX_C`, `HUMIDITY_MIN`, and
+`HUMIDITY_MAX` in `.env`, then restart. Invalid limits fail startup.
+Stored booleans reflect the limits at measurement time, not later changes.
+
+The existing active-high RGB wiring uses BCM 18 (red), 23 (green), and 24 (blue).
+Red and green are lit during measurement. A valid in-range reading shows green
+for 1.25 seconds. An out-of-range reading flashes red three times (250 ms on,
+250 ms off). A sensor timeout shows solid red for 1.25 seconds. LEDs are cleared
+before releasing the lock, so requests cannot mix their LED patterns.
+An out-of-range reading is still saved and returns 201; LED feedback describes
+the sensor result, not database commit success.
