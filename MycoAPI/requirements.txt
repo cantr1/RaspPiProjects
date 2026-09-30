@@ -2,5 +2,6 @@ fastapi>=0.115,<1
 uvicorn>=0.30,<1
 psycopg>=3.2,<4
 python-dotenv>=1,<2
+smbus2>=0.4,<1
 dht11==0.1.0; platform_system == "Linux"
 RPi.GPIO>=0.7,<0.8; platform_system == "Linux"

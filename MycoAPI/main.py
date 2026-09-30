@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from psycopg.rows import dict_row
 from pydantic import BaseModel
+from lcd_control import LCD_Control
 
 logger = logging.getLogger(__name__)
 SENSOR_RETRY_INTERVAL_SECONDS = 0.25
@@ -92,6 +93,7 @@ class MycoAPI:
         self.red_pwm.start(0)
         self.green_pwm.start(0)
         self.blue_pwm.start(0)
+        self.lcd = LCD_Control()
 
 
     def show_result(self, within_tolerance: bool):
@@ -133,12 +135,17 @@ class MycoAPI:
                         humidity=result.humidity,
                         within_tolerance=self.tolerance.contains(result.temperature, result.humidity),
                     )
+                    self.lcd.show_measurement(measurement.temperature_c, measurement.humidity)
                     self.show_result(measurement.within_tolerance)
                     return measurement
                 logger.warning('Invalid DHT11 reading: error_code=%s', result.error_code)
+            self.lcd.show('Read failed', 'No valid reading')
             self.green_pwm.ChangeDutyCycle(0)
             time.sleep(1.25)
             return None
+        except Exception:
+            self.lcd.show('Read failed', 'Sensor error')
+            raise
         finally:
             try:
                 self.red_pwm.ChangeDutyCycle(0)
@@ -152,7 +159,10 @@ class MycoAPI:
             self.green_pwm.stop()
             self.blue_pwm.stop()
         finally:
-            self.gpio.cleanup()
+            try:
+                self.lcd.close()
+            finally:
+                self.gpio.cleanup()
 
 
 def save_measurement(db_url: str, measurement: Measurement) -> dict:

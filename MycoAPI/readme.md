@@ -76,3 +76,16 @@ for 1.25 seconds. An out-of-range reading flashes red three times (250 ms on,
 before releasing the lock, so requests cannot mix their LED patterns.
 An out-of-range reading is still saved and returns 201; LED feedback describes
 the sensor result, not database commit success.
+
+## LCD
+
+The supplied LCD1602 driver displays readings on the 16x2 I2C screen at address
+`0x27` on bus 1. Enable I2C on the Pi and install the updated requirements
+(including `smbus2`). The API user needs access to `/dev/i2c-1`.
+
+The screen shows `Temp: 18.5C` and `Humidity: 90.0%`, retaining the last reading
+until the next result. Sensor failures replace that result with `Read failed`.
+Values describe the sensor reading, not database commit success. Updates occur
+under the sensor lock. LCD errors are logged without discarding valid readings.
+On graceful shutdown the screen is cleared, its backlight turned off, and the
+I2C bus closed. The sample's temperature toggle switch is not used by the API.

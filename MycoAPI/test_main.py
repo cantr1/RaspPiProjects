@@ -47,10 +47,11 @@ def test_close_stops_pwm_before_cleaning_all_gpio():
     sensor.green_pwm = hardware.green
     sensor.blue_pwm = hardware.blue
     sensor.gpio = hardware.gpio
+    sensor.lcd = hardware.lcd
     sensor.close()
     from unittest.mock import call
     assert hardware.mock_calls == [call.red.stop(), call.green.stop(),
-                                   call.blue.stop(), call.gpio.cleanup()]
+                                   call.blue.stop(), call.lcd.close(), call.gpio.cleanup()]
 
 
 def test_measure_commits_before_201(client, monkeypatch):
@@ -120,6 +121,7 @@ def timed_sensor(monkeypatch):
     sensor.blue_pwm = MagicMock()
     sensor.show_result = MagicMock()
     sensor.dht = MagicMock()
+    sensor.lcd = MagicMock()
     return sensor, clock
 
 
@@ -260,3 +262,60 @@ def test_out_of_range_reading_is_saved_with_false(client, monkeypatch):
     assert response.status_code == 201
     assert response.json()['within_tolerance'] is False
     assert connection.execute.call_args.args[1][-1] is False
+
+
+def test_valid_reading_updates_lcd_while_locked(timed_sensor):
+    sensor, _ = timed_sensor
+    sensor.dht.read.return_value = result(True)
+    def display(temperature, humidity):
+        assert sensor.lock.locked()
+        assert (temperature, humidity) == (23, 65)
+    sensor.lcd.show_measurement.side_effect = display
+    assert sensor.take_measurement() is not None
+    sensor.lcd.show_measurement.assert_called_once_with(23, 65)
+
+
+def test_failed_reading_replaces_old_lcd_result(timed_sensor):
+    sensor, _ = timed_sensor
+    sensor.dht.read.return_value = result(False)
+    assert sensor.take_measurement() is None
+    sensor.lcd.show.assert_called_once_with('Read failed', 'No valid reading')
+    sensor.lcd.show_measurement.assert_not_called()
+
+
+def test_lcd_formats_and_pads_both_rows():
+    from lcd_control import LCD_Control
+    from unittest.mock import call
+    display = LCD_Control.__new__(LCD_Control)
+    display.lcd = MagicMock()
+    display.show_measurement(18.5, 90)
+    assert display.lcd.write.call_args_list == [
+        call(0, 0, 'Temp: 18.5C'.ljust(16)),
+        call(0, 1, 'Humidity: 90.0%'.ljust(16)),
+    ]
+
+
+def test_lcd_failure_does_not_discard_reading(timed_sensor):
+    from lcd_control import LCD_Control
+    sensor, _ = timed_sensor
+    display = LCD_Control.__new__(LCD_Control)
+    display.lcd = MagicMock()
+    display.lcd.write.side_effect = OSError('I2C disconnected')
+    sensor.lcd = display
+    sensor.dht.read.return_value = result(True)
+    assert sensor.take_measurement().temperature_c == 23
+    assert not sensor.lock.locked()
+
+
+def test_lcd_initialization_failure_closes_driver(monkeypatch):
+    import sys
+    from lcd_control import LCD_Control
+    driver = MagicMock()
+    driver.init.return_value = False
+    monkeypatch.setitem(sys.modules, 'LCD1602', driver)
+    display = LCD_Control()
+    driver.init.assert_called_once_with(0x27, 1)
+    driver.close.assert_called_once()
+    assert display.lcd is None
+    display.show_measurement(18, 90)
+    driver.write.assert_not_called()

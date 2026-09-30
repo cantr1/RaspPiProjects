@@ -4,7 +4,7 @@
 import time
 import smbus2 as smbus
  
-BUS = smbus.SMBus(1)
+BUS = None
  
 def write_word(addr, data):
     global BLEN
@@ -50,13 +50,13 @@ def send_data(data):
     write_word(LCD_ADDR ,buf)
  
 def init(addr, bl):
-#    global BUS
-#    BUS = smbus.SMBus(1)
+    global BUS
     global LCD_ADDR
     global BLEN
     LCD_ADDR = addr
     BLEN = bl
     try:
+        BUS = smbus.SMBus(1)
         send_command(0x33) # Must initialize to 8-line mode at first
         time.sleep(0.005)
         send_command(0x32) # Then initialize to 4-line mode
@@ -67,13 +67,23 @@ def init(addr, bl):
         time.sleep(0.005)
         send_command(0x01) # Clear Screen
         BUS.write_byte(LCD_ADDR, 0x08)
-    except:
+    except OSError:
         return False
     else:
         return True
  
 def clear():
     send_command(0x01) # Clear Screen
+
+def close():
+    global BUS
+    if BUS is not None:
+        try:
+            clear()
+            BUS.write_byte(LCD_ADDR, 0x00)  # Backlight off.
+        finally:
+            BUS.close()
+            BUS = None
  
 def openlight():  # Enable the backlight
     BUS.write_byte(0x27,0x08)
